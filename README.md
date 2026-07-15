@@ -1,68 +1,61 @@
 # OmniBrain – PDF Ingestion Engine
 
-A modular and scalable PDF Ingestion Engine designed as the foundation of the OmniBrain platform. This project extracts structured information from PDF documents, including metadata, text, images, and tables, and prepares them for downstream AI applications such as Retrieval-Augmented Generation (RAG), document understanding, and multimodal processing.
+A production-oriented, modular PDF Ingestion Engine that serves as the first component of the **OmniBrain** ecosystem.
+
+The engine transforms unstructured PDF documents into structured, machine-readable data by extracting metadata, text, images, and tables while providing automatic OCR fallback for scanned documents. The extracted information is prepared for downstream AI applications such as Retrieval-Augmented Generation (RAG), semantic search, multimodal reasoning, and intelligent document understanding.
 
 ---
 
-## Overview
+# Key Features
 
-OmniBrain aims to transform unstructured PDF documents into structured, machine-readable data.
+## Document Processing
 
-The current implementation focuses on building a reliable PDF ingestion pipeline that processes a document through multiple extraction stages while maintaining a clean and extensible architecture.
-
----
-
-## Features
-
-### PDF Reader
-- PDF validation
-- Open and close PDF documents
-- Page count retrieval
-- Metadata access
-- Encrypted PDF detection
-
-### Metadata Extraction
-Extracts document information including:
-- File name
-- File size
-- Page count
-- Title
-- Author
-- Subject
-- Keywords
-- Creator
-- Producer
-- Creation date
-- Modification date
-
-### Text Extraction
-- Page-wise text extraction
-- UTF-8 encoding support
-- Empty page detection
-- Character statistics
-- Structured text output
-
-### Image Extraction
+- PDF validation and loading
+- Automatic page detection
+- Metadata extraction
+- Native text extraction using PyMuPDF
+- Automatic OCR fallback using EasyOCR
 - Embedded image extraction
-- Duplicate image detection using XREF
-- Image metadata collection
-- Organized image storage
-
-### Table Extraction
-- Table detection using pdfplumber
-- CSV export
-- Table metadata generation
-
-### Report Generation
-Generates a structured JSON report summarizing:
-- Metadata
-- Text statistics
-- Image statistics
-- Table statistics
+- Table extraction using pdfplumber
+- Structured JSON report generation
 
 ---
 
-# Project Structure
+## OCR Support
+
+OmniBrain intelligently determines whether OCR is required.
+
+```
+PDF Page
+    │
+    ▼
+Native Text Extraction
+    │
+    ├── Text Found
+    │       │
+    │       ▼
+    │   Continue Processing
+    │
+    └── No Text
+            │
+            ▼
+      EasyOCR Fallback
+            │
+            ▼
+      Continue Processing
+```
+
+Current OCR capabilities:
+
+- Automatic OCR triggering
+- Lazy-loaded OCR engine
+- Configurable OCR threshold
+- Configurable OCR DPI
+- Configurable OCR language support
+
+---
+
+# Architecture
 
 ```
 OmniBrain/
@@ -79,6 +72,7 @@ OmniBrain/
 │   │   ├── pdf_reader.py
 │   │   ├── metadata.py
 │   │   ├── text_extractor.py
+│   │   ├── ocr.py
 │   │   ├── image_extractor.py
 │   │   ├── table_extractor.py
 │   │   ├── report_generator.py
@@ -89,8 +83,8 @@ OmniBrain/
 │   ├── retrieval/
 │   ├── agents/
 │   ├── llm/
-│   ├── utils/
 │   ├── models/
+│   ├── utils/
 │   └── exceptions/
 │
 ├── data/
@@ -102,13 +96,13 @@ OmniBrain/
 │   │   ├── text/
 │   │   ├── images/
 │   │   ├── tables/
-│   │   └── reports/
+│   │   ├── reports/
+│   │   └── ocr/
 │   │
 │   └── temp/
 │
 ├── docs/
 ├── logs/
-├── reports/
 ├── scripts/
 ├── tests/
 │
@@ -127,23 +121,21 @@ PDF
  ▼
 PDF Reader
  │
- ▼
-Metadata Extraction
+ ├────────► Metadata Extraction
+ │
+ ├────────► Text Extraction
+ │               │
+ │               ├── Native Extraction
+ │               └── OCR Fallback
+ │
+ ├────────► Image Extraction
+ │
+ ├────────► Table Extraction
+ │
+ └────────► Report Generation
  │
  ▼
-Text Extraction
- │
- ▼
-Image Extraction
- │
- ▼
-Table Extraction
- │
- ▼
-Report Generation
- │
- ▼
-Processed Outputs
+Structured Outputs
 ```
 
 ---
@@ -157,7 +149,7 @@ git clone <repository-url>
 cd OmniBrain
 ```
 
-Create and activate a virtual environment
+Create the environment
 
 ```bash
 conda create -n omnibrain python=3.11
@@ -180,7 +172,7 @@ Place a PDF inside
 data/input/pdfs/
 ```
 
-Run the application
+Run the pipeline
 
 ```bash
 python -m app.main
@@ -197,78 +189,86 @@ data/
     ├── text/
     ├── images/
     ├── tables/
-    └── reports/
+    ├── reports/
+    └── ocr/
 ```
 
-Each processed PDF generates:
+Each processed document generates:
 
 - Metadata JSON
 - Extracted text
-- Embedded images
+- OCR text (when required)
+- Extracted images
 - Extracted tables (CSV)
 - Processing report
 
 ---
 
-# Technologies Used
+# Technology Stack
 
-- Python 3.11
-- PyMuPDF
-- pdfplumber
-- EasyOCR
-- Pillow
-- Pandas
-- NumPy
-- Loguru
-- LayoutParser
+| Category | Technologies |
+|-----------|--------------|
+| Language | Python 3.11 |
+| PDF Processing | PyMuPDF, pdfplumber |
+| OCR | EasyOCR |
+| Image Processing | Pillow |
+| Data Processing | NumPy, Pandas |
+| Layout Analysis | LayoutParser |
+| Logging | Loguru |
 
 ---
 
-# Current Status
+# Development Progress
 
-### Completed
+## Phase 1 — PDF Ingestion
 
-- Project Architecture
-- PDF Reader
-- Metadata Extraction
-- Text Extraction
-- Image Extraction
-- Table Extraction
-- Report Generator
-- Pipeline Orchestration
+- [x] Project Architecture
+- [x] PDF Reader
+- [x] Metadata Extraction
+- [x] Native Text Extraction
+- [x] OCR Module
+- [x] OCR Fallback
+- [x] Image Extraction
+- [x] Table Extraction
+- [x] JSON Report Generation
+- [x] Modular Pipeline
 
-### In Progress
+---
 
-- OCR Integration
-- Logging System
-- Progress Tracking
-- Exception Handling
+## Phase 2 — In Progress
 
-### Planned
+- [ ] Logging Framework
+- [ ] Exception Handling
+- [ ] Layout Analysis
+- [ ] OCR Optimization
 
-- Layout Analysis
-- Semantic Chunking
-- Embedding Generation
-- Vector Database Integration
-- Hybrid Retrieval
-- Agentic Workflow
-- Multimodal RAG
+---
+
+## Phase 3 — Planned
+
+- [ ] Semantic Chunking
+- [ ] Embedding Generation
+- [ ] Vector Database Integration
+- [ ] Hybrid Retrieval
+- [ ] LangGraph Workflow
+- [ ] Multi-Agent Architecture
+- [ ] Multimodal RAG
 
 ---
 
 # Future Vision
 
-The PDF Ingestion Engine is the first component of the OmniBrain ecosystem.
+The PDF Ingestion Engine serves as the foundation of the OmniBrain platform.
 
-Future versions will support:
+Future releases will include:
 
-- OCR for scanned documents
-- Intelligent layout understanding
-- Semantic document chunking
-- Vision-language models
+- Intelligent document layout understanding
+- Semantic chunking
 - Vector database integration
+- Hybrid retrieval
+- Vision-language models
 - Multi-agent orchestration
-- Enterprise-scale document processing
+- Enterprise-scale document intelligence
 
 ---
 
@@ -282,6 +282,6 @@ Rajiv Gandhi University of Knowledge Technologies (RGUKT)
 
 ---
 
-## License
+# License
 
-This project is currently under active development.
+This project is under active development.
