@@ -1,27 +1,18 @@
 """
-OmniBrain - PDF Ingestion Engine
+OmniBrain Configuration
 
-File: settings.py
-
-Purpose:
-    Centralized configuration for project paths,
-    processing, embeddings, vector database,
-    and retrieval.
+Centralized application settings for project paths,
+OCR, chunking, embeddings, vector database,
+retrieval, and logging.
 """
 
 from pathlib import Path
 
 
 class Settings:
-    """
-    Application configuration.
-    """
-
-    # Project Root
+    """Application configuration."""
 
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-    # Data Directories
 
     DATA_DIR = PROJECT_ROOT / "data"
 
@@ -37,43 +28,30 @@ class Settings:
     REPORT_DIR = PROCESSED_DIR / "reports"
     CHUNK_OUTPUT_DIR = PROCESSED_DIR / "chunks"
     EMBEDDING_DIR = PROCESSED_DIR / "embeddings"
+    PAYLOAD_DIR = PROCESSED_DIR / "payloads"
+
+    VECTOR_DB_DIR = DATA_DIR / "vector_db"
 
     TEMP_DIR = DATA_DIR / "temp"
 
-    # Logs
-
     LOG_DIR = PROJECT_ROOT / "logs"
-
-    # Supported File Types
+    LOG_FILE = LOG_DIR / "omnibrain.log"
+    LOG_LEVEL = "INFO"
 
     SUPPORTED_EXTENSIONS = [
         ".pdf",
     ]
 
-    # OCR Configuration
-
     OCR_THRESHOLD = 30
-
     OCR_DPI = 2.0
-
-    OCR_LANGUAGES = [
-        "en",
-    ]
-
+    OCR_LANGUAGES = ["en"]
     OCR_GPU = False
-
-    # Image Extraction
 
     IMAGE_FORMAT = "png"
 
-    # Text Chunking Configuration
-
     CHUNK_SIZE = 1000
-
     CHUNK_OVERLAP = 200
-
     MIN_CHUNK_SIZE = 150
-
     MAX_CHUNK_SIZE = 1200
 
     CHUNK_SEPARATORS = [
@@ -84,49 +62,31 @@ class Settings:
         "",
     ]
 
-    # Embedding Configuration
-
-    EMBEDDING_MODEL = (
-        "sentence-transformers/all-MiniLM-L6-v2"
-    )
-
+    EMBEDDING_MODEL = "BAAI/bge-base-en-v1.5"
     EMBEDDING_DEVICE = "cpu"
-
     EMBEDDING_BATCH_SIZE = 32
-
     NORMALIZE_EMBEDDINGS = True
-
-    VECTOR_DIMENSION = 384
-
+    VECTOR_DIMENSION = 768
     EMBEDDING_FILE = "embeddings.json"
 
-    # Vector Database Configuration
+    VECTOR_DB_MODE = "local"
 
     QDRANT_HOST = "localhost"
-
     QDRANT_PORT = 6333
-
-    COLLECTION_NAME = "omnibrain_documents"
+    QDRANT_COLLECTION = "omnibrain_documents"
 
     DISTANCE_METRIC = "Cosine"
-
     QDRANT_BATCH_SIZE = 100
-
     RECREATE_COLLECTION = False
 
-    # Retrieval Configuration
-
     TOP_K_RESULTS = 5
-
+    SEARCH_LIMIT = 5
+    SEARCH_WITH_PAYLOAD = True
     SIMILARITY_THRESHOLD = 0.65
-
-    # Utility Methods
 
     @classmethod
     def create_directories(cls) -> None:
-        """
-        Create all required project directories.
-        """
+        """Create all required project directories."""
 
         directories = [
             cls.INPUT_PDF_DIR,
@@ -137,6 +97,8 @@ class Settings:
             cls.REPORT_DIR,
             cls.CHUNK_OUTPUT_DIR,
             cls.EMBEDDING_DIR,
+            cls.PAYLOAD_DIR,
+            cls.VECTOR_DB_DIR,
             cls.TEMP_DIR,
             cls.LOG_DIR,
         ]
