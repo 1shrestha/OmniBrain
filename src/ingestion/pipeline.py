@@ -43,7 +43,9 @@ class IngestionPipeline:
 
         if len(pdf_files) > 1:
             print("Multiple PDFs found.")
-            print("Please keep only one PDF inside data/input/pdfs")
+            print(
+                "Please keep only one PDF inside data/input/pdfs"
+            )
             return
 
         pdf_path = pdf_files[0]
@@ -52,132 +54,147 @@ class IngestionPipeline:
         print("          OMNIBRAIN PDF INGESTION")
         print("=" * 60)
 
-        # Open PDF
-
         reader = PDFReader(pdf_path)
 
-        document = reader.open()
+        try:
 
-        print(f"\nOpened PDF : {pdf_path.name}")
-        print(f"Pages      : {reader.page_count}")
+            # Open PDF
 
-        # Metadata Extraction
+            document = reader.open()
 
-        metadata = MetadataExtractor(
-            pdf_path,
-            document,
-        )
+            print(f"\nOpened PDF : {pdf_path.name}")
+            print(f"Pages      : {reader.page_count}")
 
-        metadata_data = metadata.extract()
+            # Metadata Extraction
 
-        metadata.save(metadata_data)
-
-        print("Metadata Extracted")
-
-        # Text Extraction
-
-        text = TextExtractor(
-            pdf_path,
-            document,
-        )
-
-        text_data = text.extract()
-
-        text.save(text_data)
-
-        print(
-            f"Text Extracted "
-            f"({text_data['page_count']} pages)"
-        )
-
-        print(
-            f"OCR Pages : "
-            f"{text_data['ocr_pages']}"
-        )
-
-        # Text Cleaning
-
-        cleaner = TextCleaner()
-
-        for page in text_data["pages"]:
-
-            page["text"] = cleaner.clean(
-                page["text"]
+            metadata = MetadataExtractor(
+                pdf_path,
+                document,
             )
 
-        print("Text Cleaned")
+            metadata_data = metadata.extract()
 
-        # Text Chunking
+            metadata.save(metadata_data)
 
-        chunker = TextChunker(pdf_path)
+            print("Metadata Extracted")
 
-        chunk_data = chunker.chunk(
-            text_data
-        )
+            # Text Extraction
 
-        print(
-            f"Chunks Generated : "
-            f"{chunk_data['chunk_count']}"
-        )
+            text = TextExtractor(
+                pdf_path,
+                document,
+            )
 
-        # Chunk Validation
+            text_data = text.extract()
 
-        validator = ChunkValidator()
+            text.save(text_data)
 
-        chunk_data = validator.validate(
-            chunk_data
-        )
+            print(
+                f"Text Extracted "
+                f"({text_data['page_count']} pages)"
+            )
 
-        chunker.save(chunk_data)
+            print(
+                f"OCR Pages : "
+                f"{text_data['ocr_pages']}"
+            )
 
-        print(
-            f"Valid Chunks : "
-            f"{chunk_data['chunk_count']}"
-        )
+            # Text Cleaning
 
-        # Image Extraction
+            cleaner = TextCleaner()
 
-        images = ImageExtractor(
-            pdf_path,
-            document,
-        )
+            for page in text_data["pages"]:
 
-        image_data = images.extract()
+                page["text"] = cleaner.clean(
+                    page["text"]
+                )
 
-        print(
-            f"Images Extracted : "
-            f"{image_data['unique_images']}"
-        )
+            print("Text Cleaned")
 
-        # Table Extraction
+            # Text Chunking
 
-        tables = TableExtractor(pdf_path)
+            chunker = TextChunker(
+                pdf_path
+            )
 
-        table_data = tables.extract()
+            chunk_data = chunker.chunk(
+                text_data=text_data,
+                metadata=metadata_data,
+            )
 
-        print(
-            f"Tables Extracted : "
-            f"{table_data['count']}"
-        )
+            print(
+                f"Chunks Generated : "
+                f"{chunk_data['chunk_count']}"
+            )
 
-        # Report Generation
+            # Chunk Validation
 
-        report = ReportGenerator(pdf_path)
+            validator = ChunkValidator()
 
-        report_data = report.generate(
-            metadata=metadata_data,
-            text=text_data,
-            images=image_data,
-            chunks=chunk_data,
-            tables=table_data,
-        )
+            chunk_data = validator.validate(
+                chunk_data
+            )
 
-        report.save(report_data)
+            chunker.save(
+                chunk_data
+            )
 
-        print("Report Generated")
+            print(
+                f"Valid Chunks : "
+                f"{chunk_data['chunk_count']}"
+            )
 
-        # Close PDF
+            # Image Extraction
 
-        reader.close()
+            images = ImageExtractor(
+                pdf_path,
+                document,
+                metadata_data,
+            )
 
-        print("\nPipeline Completed Successfully")
+            image_data = images.extract()
+
+            print(
+                f"Images Extracted : "
+                f"{image_data['unique_images']}"
+            )
+
+            # Table Extraction
+
+            tables = TableExtractor(
+                pdf_path,
+                metadata_data,
+            )
+
+            table_data = tables.extract()
+
+            print(
+                f"Tables Extracted : "
+                f"{table_data['count']}"
+            )
+
+            # Report Generation
+
+            report = ReportGenerator(
+                pdf_path
+            )
+
+            report_data = report.generate(
+                metadata=metadata_data,
+                text=text_data,
+                chunks=chunk_data,
+                images=image_data,
+                tables=table_data,
+            )
+
+            report.save(report_data)
+
+            print("Report Generated")
+
+            print(
+                "\nPipeline Completed Successfully"
+            )
+
+        finally:
+
+            reader.close()

@@ -1,5 +1,4 @@
 """
-
 OmniBrain - PDF Ingestion Engine
 
 Module: Text Extractor
@@ -7,12 +6,12 @@ Module: Text Extractor
 Purpose:
     Extract searchable text from PDF documents using
     PyMuPDF with automatic OCR fallback.
-
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import fitz
 
@@ -26,7 +25,7 @@ class TextExtractor:
 
     Workflow:
         1. Try native PyMuPDF extraction.
-        2. If little/no text is found, use OCR.
+        2. If little or no text is found, use OCR.
         3. Save unified text output.
     """
 
@@ -39,14 +38,13 @@ class TextExtractor:
         self.pdf_path = Path(pdf_path)
         self.document = document
 
-        # Lazy-loaded OCR service
+        # Lazy-loaded OCR engine
         self.ocr = None
 
-    
-    # Extraction
-    
-
-    def extract(self) -> dict:
+    def extract(self) -> dict[str, Any]:
+        """
+        Extract text from every page.
+        """
 
         pages = []
 
@@ -56,30 +54,25 @@ class TextExtractor:
 
         ocr_pages = 0
 
-        for page_number in range(self.document.page_count):
+        ocr_page_numbers = []
 
-            page = self.document.load_page(page_number)
+        for page_number in range(
+            self.document.page_count
+        ):
 
-            
-            # Native text extraction
-            
-
-            text = page.get_text("text").strip()
-
-            print(
-                f"[DEBUG] Page {page_number + 1}: "
-                f"Native Characters = {len(text)}"
+            page = self.document.load_page(
+                page_number
             )
 
-            
-            # OCR Fallback
-            
+            text = page.get_text(
+                "text"
+            ).strip()
+
+            extraction_method = "text"
+
+            # OCR fallback
 
             if len(text) < Settings.OCR_THRESHOLD:
-
-                print(
-                    f"[INFO] OCR triggered on page {page_number + 1}"
-                )
 
                 if self.ocr is None:
 
@@ -91,13 +84,21 @@ class TextExtractor:
 
                 try:
 
-                    ocr_text = self.ocr.extract_page(page)
+                    ocr_text = self.ocr.extract_page(
+                        page
+                    )
 
                     if ocr_text.strip():
 
                         text = ocr_text
 
+                        extraction_method = "ocr"
+
                         ocr_pages += 1
+
+                        ocr_page_numbers.append(
+                            page_number + 1
+                        )
 
                 except Exception as error:
 
@@ -106,13 +107,11 @@ class TextExtractor:
                         f"{page_number + 1}: {error}"
                     )
 
-            
-            # Empty page
-            
+            if not text:
 
-            if not text.strip():
-
-                empty_pages.append(page_number + 1)
+                empty_pages.append(
+                    page_number + 1
+                )
 
             total_characters += len(text)
 
@@ -120,39 +119,35 @@ class TextExtractor:
                 {
                     "page": page_number + 1,
                     "text": text,
+                    "extraction_method": extraction_method,
                 }
             )
-
-            print(
-                f"[DEBUG] Saved page {page_number + 1}"
-            )
-
-        print(
-            f"[DEBUG] Total Pages Saved = {len(pages)}"
-        )
 
         return {
 
             "pages": pages,
 
-            "page_count": len(pages),
+            "page_count": len(
+                pages
+            ),
 
             "empty_pages": empty_pages,
 
             "ocr_pages": ocr_pages,
 
+            "ocr_page_numbers": ocr_page_numbers,
+
             "total_characters": total_characters,
 
         }
 
-    
-    # Save
-    
-
     def save(
         self,
-        extraction_result: dict,
+        extraction_result: dict[str, Any],
     ) -> Path:
+        """
+        Save extracted text.
+        """
 
         output_file = (
             Settings.TEXT_DIR
@@ -165,15 +160,25 @@ class TextExtractor:
             encoding="utf-8",
         ) as file:
 
-            for page in extraction_result["pages"]:
+            for page in extraction_result[
+                "pages"
+            ]:
 
-                file.write("=" * 80 + "\n")
+                file.write(
+                    "=" * 80 + "\n"
+                )
+
                 file.write(
                     f"PAGE {page['page']}\n"
                 )
-                file.write("=" * 80 + "\n\n")
 
-                file.write(page["text"])
+                file.write(
+                    "=" * 80 + "\n\n"
+                )
+
+                file.write(
+                    page["text"]
+                )
 
                 file.write("\n\n")
 

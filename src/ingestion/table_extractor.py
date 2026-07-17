@@ -4,7 +4,6 @@ Module: Table Extractor
 Purpose:
     Extract tabular data from PDF documents and save
     each detected table as a CSV file.
-
 """
 
 from __future__ import annotations
@@ -23,17 +22,18 @@ class TableExtractor:
     Extract tables from PDF documents.
     """
 
-    def __init__(self, pdf_path: Path) -> None:
+    def __init__(
+        self,
+        pdf_path: Path,
+        metadata: dict[str, Any],
+    ) -> None:
+
         self.pdf_path = Path(pdf_path)
+        self.metadata = metadata
 
     def extract(self) -> dict[str, Any]:
         """
         Extract tables from the PDF.
-
-        Returns
-        -------
-        dict
-            Information about extracted tables.
         """
 
         output_directory = (
@@ -50,7 +50,9 @@ class TableExtractor:
 
         total_tables = 0
 
-        with pdfplumber.open(self.pdf_path) as pdf:
+        with pdfplumber.open(
+            self.pdf_path
+        ) as pdf:
 
             for page_number, page in enumerate(
                 pdf.pages,
@@ -70,7 +72,9 @@ class TableExtractor:
                     if not table:
                         continue
 
-                    dataframe = pd.DataFrame(table)
+                    dataframe = pd.DataFrame(
+                        table
+                    )
 
                     if dataframe.empty:
                         continue
@@ -91,19 +95,63 @@ class TableExtractor:
                         header=False,
                     )
 
+                    relative_path = (
+                        csv_path.relative_to(
+                            Settings.PROJECT_ROOT
+                        )
+                    )
+
+                    table_id = (
+                        f"{self.metadata['document_id'][:8]}"
+                        f"_p{page_number:03}"
+                        f"_t{table_index:03}"
+                    )
+
+                    empty_cells = int(
+                        dataframe.isna().sum().sum()
+                    )
+
                     extracted_tables.append(
                         {
-                            "page": page_number,
-                            "table": table_index,
+                            "table_id": table_id,
+
+                            "document_id": self.metadata[
+                                "document_id"
+                            ],
+
+                            "document": self.pdf_path.name,
+
+                            "page_number": page_number,
+
+                            "table_index": table_index,
+
                             "rows": dataframe.shape[0],
+
                             "columns": dataframe.shape[1],
-                            "path": str(csv_path),
+
+                            "empty_cells": empty_cells,
+
+                            "format": "csv",
+
+                            "path": str(
+                                relative_path
+                            ),
+
+                            "extraction_method": "pdfplumber",
                         }
                     )
 
                     total_tables += 1
 
         return {
+
+            "document_id": self.metadata[
+                "document_id"
+            ],
+
+            "document": self.pdf_path.name,
+
             "count": total_tables,
+
             "tables": extracted_tables,
         }

@@ -43,11 +43,15 @@ class ReportGenerator:
 
         report = {
 
+            "document_id": metadata["document_id"],
+
             "document": self.pdf_path.name,
 
             "generated_at": datetime.now().isoformat(),
 
             "status": "SUCCESS",
+
+            "pipeline_version": "2.0",
 
             "metadata": metadata,
 
@@ -71,7 +75,93 @@ class ReportGenerator:
 
             },
 
-            "chunk_statistics": chunks["statistics"],
+            "chunk_statistics": {
+
+                "original_chunk_count":
+                    chunks["statistics"]["original_chunk_count"],
+
+                "validated_chunk_count":
+                    chunks["statistics"]["validated_chunk_count"],
+
+                "largest_chunk":
+                    chunks["statistics"]["largest_chunk"],
+
+                "smallest_chunk":
+                    chunks["statistics"]["smallest_chunk"],
+
+                "average_chunk_size":
+                    chunks["statistics"]["average_chunk_size"],
+
+                "average_word_count":
+                    chunks["statistics"]["average_word_count"],
+
+                "total_characters":
+                    chunks["statistics"]["total_characters"],
+
+                "total_words":
+                    chunks["statistics"]["total_words"],
+
+                "merged_chunks":
+                    chunks["statistics"]["merged_chunks"],
+
+                "removed_empty":
+                    chunks["statistics"]["removed_empty"],
+
+                "removed_duplicates":
+                    chunks["statistics"]["removed_duplicates"],
+
+            },
+
+            "image_statistics": {
+
+                "total_images":
+                    images["count"],
+
+                "unique_images":
+                    images["unique_images"],
+
+            },
+
+            "table_statistics": {
+
+                "total_tables":
+                    tables["count"],
+
+            },
+
+            "embedding_configuration": {
+
+                "model":
+                    Settings.EMBEDDING_MODEL,
+
+                "vector_dimension":
+                    Settings.VECTOR_DIMENSION,
+
+                "normalized":
+                    Settings.NORMALIZE_EMBEDDINGS,
+
+                "device":
+                    Settings.EMBEDDING_DEVICE,
+
+            },
+
+            "vector_database": {
+
+                "provider": "Qdrant",
+
+                "collection":
+                    Settings.COLLECTION_NAME,
+
+                "host":
+                    Settings.QDRANT_HOST,
+
+                "port":
+                    Settings.QDRANT_PORT,
+
+                "distance_metric":
+                    Settings.DISTANCE_METRIC,
+
+            },
 
             "processing": {
 

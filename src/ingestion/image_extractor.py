@@ -1,9 +1,8 @@
 """
-
-OmniBrain - PDF Ingestion Engine
+OmniBrain
 
 Module: Image Extractor
- 
+
 Purpose:
     Extract embedded images from PDF documents.
 
@@ -12,7 +11,6 @@ Responsibilities:
     - Skip duplicate images
     - Save images to disk
     - Collect image metadata
-
 """
 
 from __future__ import annotations
@@ -30,34 +28,23 @@ class ImageExtractor:
     Extract embedded images from a PDF document.
     """
 
-    def __init__(self, pdf_path: Path, document: fitz.Document) -> None:
+    def __init__(
+        self,
+        pdf_path: Path,
+        document: fitz.Document,
+        metadata: dict[str, Any],
+    ) -> None:
         """
         Initialize the Image Extractor.
-
-        Parameters
-        ----------
-        pdf_path : Path
-            Path to the PDF document.
-
-        document : fitz.Document
-            Opened PyMuPDF document.
         """
 
         self.pdf_path = Path(pdf_path)
         self.document = document
-
-    
-    # Image Extraction
-    
+        self.metadata = metadata
 
     def extract(self) -> dict[str, Any]:
         """
         Extract embedded images from the PDF.
-
-        Returns
-        -------
-        dict
-            Dictionary containing extracted image metadata.
         """
 
         output_directory = (
@@ -72,17 +59,18 @@ class ImageExtractor:
 
         extracted_images = []
 
-        total_images = 0
-
-        # Track already extracted images
         processed_xrefs = set()
+
+        total_images = 0
 
         for page_number, page in enumerate(
             self.document,
             start=1,
         ):
 
-            images = page.get_images(full=True)
+            images = page.get_images(
+                full=True
+            )
 
             for image_index, image in enumerate(
                 images,
@@ -92,18 +80,21 @@ class ImageExtractor:
                 xref = image[0]
 
                 # Skip duplicate embedded images
+
                 if xref in processed_xrefs:
                     continue
 
                 processed_xrefs.add(xref)
 
-                base_image = self.document.extract_image(
-                    xref
+                base_image = (
+                    self.document.extract_image(
+                        xref
+                    )
                 )
 
                 image_bytes = base_image["image"]
 
-                extension = base_image["ext"]
+                image_format = base_image["ext"]
 
                 width = base_image["width"]
 
@@ -117,7 +108,7 @@ class ImageExtractor:
                 image_name = (
                     f"page_{page_number:03d}"
                     f"_img_{image_index:03d}"
-                    f".{extension}"
+                    f".{image_format}"
                 )
 
                 image_path = (
@@ -134,27 +125,70 @@ class ImageExtractor:
                         image_bytes
                     )
 
+                relative_path = (
+                    image_path.relative_to(
+                        Settings.PROJECT_ROOT
+                    )
+                )
+
+                image_id = (
+                    f"{self.metadata['document_id'][:8]}"
+                    f"_p{page_number:03}"
+                    f"_i{image_index:03}"
+                )
+
                 extracted_images.append(
                     {
-                        "page": page_number,
-                        "image": image_index,
+                        "image_id": image_id,
+
+                        "document_id": self.metadata[
+                            "document_id"
+                        ],
+
+                        "document": self.pdf_path.name,
+
+                        "page_number": page_number,
+
+                        "image_index": image_index,
+
                         "xref": xref,
+
                         "width": width,
+
                         "height": height,
+
                         "colorspace": colorspace,
-                        "extension": extension,
+
+                        "format": image_format,
+
                         "size_kb": round(
                             len(image_bytes) / 1024,
                             2,
                         ),
-                        "path": str(image_path),
+
+                        "path": str(
+                            relative_path
+                        ),
+
+                        "extraction_method": "embedded",
                     }
                 )
 
                 total_images += 1
 
         return {
+
+            "document_id": self.metadata[
+                "document_id"
+            ],
+
+            "document": self.pdf_path.name,
+
             "count": total_images,
-            "unique_images": len(processed_xrefs),
+
+            "unique_images": len(
+                processed_xrefs
+            ),
+
             "images": extracted_images,
         }
