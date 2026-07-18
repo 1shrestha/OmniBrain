@@ -1,5 +1,4 @@
-"""
-OmniBrain Configuration
+"""OmniBrain Configuration
 
 Centralized application settings for project paths,
 OCR, chunking, embeddings, vector database,
@@ -9,7 +8,6 @@ retrieval, logging, and hardware configuration.
 from __future__ import annotations
 
 from pathlib import Path
-
 import torch
 
 
@@ -51,7 +49,6 @@ class Settings:
     # ==========================================================
 
     USE_GPU = torch.cuda.is_available()
-
     DEVICE = "cuda" if USE_GPU else "cpu"
 
     GPU_NAME = (
@@ -60,22 +57,18 @@ class Settings:
         else "CPU"
     )
 
-    # Module-specific devices
     OCR_DEVICE = DEVICE
     EMBEDDING_DEVICE = DEVICE
     RERANKER_DEVICE = DEVICE
     VISION_DEVICE = DEVICE
     LLM_DEVICE = DEVICE
-
     OCR_GPU = USE_GPU
 
     # ==========================================================
     # Supported Files
     # ==========================================================
 
-    SUPPORTED_EXTENSIONS = [
-        ".pdf",
-    ]
+    SUPPORTED_EXTENSIONS = [".pdf"]
 
     # ==========================================================
     # OCR Configuration
@@ -110,36 +103,37 @@ class Settings:
     ]
 
     # ==========================================================
-    # Embedding Configuration
+    # Text Embedding Configuration
     # ==========================================================
 
     EMBEDDING_MODEL = "BAAI/bge-base-en-v1.5"
-
     EMBEDDING_DEVICE = DEVICE
-
     EMBEDDING_BATCH_SIZE = 32
-
     NORMALIZE_EMBEDDINGS = True
-
     VECTOR_DIMENSION = 768
-
     EMBEDDING_FILE = "embeddings.json"
+
+    # ==========================================================
+    # Image Embedding Configuration
+    # ==========================================================
+
+    IMAGE_EMBEDDING_MODEL = "ViT-B-32"
+    IMAGE_PRETRAINED = "laion2b_s34b_b79k"
+    IMAGE_VECTOR_DIMENSION = 512
+    IMAGE_BATCH_SIZE = 16
+    IMAGE_COLLECTION = "omnibrain_images"
 
     # ==========================================================
     # Vector Database
     # ==========================================================
 
     VECTOR_DB_MODE = "local"
-
+    QDRANT_PATH = VECTOR_DB_DIR
     QDRANT_HOST = "localhost"
     QDRANT_PORT = 6333
-
     QDRANT_COLLECTION = "omnibrain_documents"
-
     DISTANCE_METRIC = "Cosine"
-
     QDRANT_BATCH_SIZE = 100
-
     RECREATE_COLLECTION = False
 
     # ==========================================================
@@ -147,11 +141,8 @@ class Settings:
     # ==========================================================
 
     TOP_K_RESULTS = 5
-
     SEARCH_LIMIT = 5
-
     SEARCH_WITH_PAYLOAD = True
-
     SIMILARITY_THRESHOLD = 0.65
 
     # ==========================================================
@@ -160,8 +151,6 @@ class Settings:
 
     @classmethod
     def create_directories(cls) -> None:
-        """Create all required project directories."""
-
         directories = [
             cls.INPUT_PDF_DIR,
             cls.TEXT_DIR,
@@ -176,17 +165,11 @@ class Settings:
             cls.TEMP_DIR,
             cls.LOG_DIR,
         ]
-
         for directory in directories:
-            directory.mkdir(
-                parents=True,
-                exist_ok=True,
-            )
+            directory.mkdir(parents=True, exist_ok=True)
 
     @classmethod
     def print_device_info(cls) -> None:
-        """Display the active inference device."""
-
         print("\nHardware Configuration")
         print("-" * 30)
         print(f"Device : {cls.DEVICE}")

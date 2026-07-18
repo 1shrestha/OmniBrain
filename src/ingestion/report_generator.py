@@ -22,11 +22,7 @@ class ReportGenerator:
     Generate a structured PDF ingestion report.
     """
 
-    def __init__(
-        self,
-        pdf_path: Path,
-    ) -> None:
-
+    def __init__(self, pdf_path: Path) -> None:
         self.pdf_path = Path(pdf_path)
 
     def generate(
@@ -36,6 +32,10 @@ class ReportGenerator:
         chunks: dict[str, Any],
         images: dict[str, Any],
         tables: dict[str, Any],
+        text_embeddings: int,
+        text_vectors_uploaded: int,
+        image_embeddings: int,
+        image_vectors_uploaded: int,
     ) -> dict[str, Any]:
         """
         Generate ingestion report.
@@ -44,145 +44,72 @@ class ReportGenerator:
         report = {
 
             "document_id": metadata["document_id"],
-
             "document": self.pdf_path.name,
-
             "generated_at": datetime.now().isoformat(),
-
             "status": "SUCCESS",
-
-            "pipeline_version": "2.0",
+            "pipeline_version": "3.0",
 
             "metadata": metadata,
 
             "summary": {
-
                 "pages": metadata["pages"],
-
                 "characters": text["total_characters"],
-
-                "empty_pages": len(
-                    text["empty_pages"]
-                ),
-
+                "empty_pages": len(text["empty_pages"]),
                 "ocr_pages": text["ocr_pages"],
-
                 "chunks": chunks["chunk_count"],
-
                 "images": images["unique_images"],
-
                 "tables": tables["count"],
-
+                "text_embeddings": text_embeddings,
+                "text_vectors_uploaded": text_vectors_uploaded,
+                "image_embeddings": image_embeddings,
+                "image_vectors_uploaded": image_vectors_uploaded,
             },
 
-            "chunk_statistics": {
-
-                "original_chunk_count":
-                    chunks["statistics"]["original_chunk_count"],
-
-                "validated_chunk_count":
-                    chunks["statistics"]["validated_chunk_count"],
-
-                "largest_chunk":
-                    chunks["statistics"]["largest_chunk"],
-
-                "smallest_chunk":
-                    chunks["statistics"]["smallest_chunk"],
-
-                "average_chunk_size":
-                    chunks["statistics"]["average_chunk_size"],
-
-                "average_word_count":
-                    chunks["statistics"]["average_word_count"],
-
-                "total_characters":
-                    chunks["statistics"]["total_characters"],
-
-                "total_words":
-                    chunks["statistics"]["total_words"],
-
-                "merged_chunks":
-                    chunks["statistics"]["merged_chunks"],
-
-                "removed_empty":
-                    chunks["statistics"]["removed_empty"],
-
-                "removed_duplicates":
-                    chunks["statistics"]["removed_duplicates"],
-
-            },
+            "chunk_statistics": chunks["statistics"],
 
             "image_statistics": {
-
-                "total_images":
-                    images["count"],
-
-                "unique_images":
-                    images["unique_images"],
-
+                "total_images": images["count"],
+                "unique_images": images["unique_images"],
+                "image_embeddings": image_embeddings,
+                "image_vectors_uploaded": image_vectors_uploaded,
             },
 
             "table_statistics": {
-
-                "total_tables":
-                    tables["count"],
-
+                "total_tables": tables["count"],
             },
 
             "embedding_configuration": {
-
-                "model":
-                    Settings.EMBEDDING_MODEL,
-
-                "vector_dimension":
-                    Settings.VECTOR_DIMENSION,
-
-                "normalized":
-                    Settings.NORMALIZE_EMBEDDINGS,
-
-                "device":
-                    Settings.EMBEDDING_DEVICE,
-
+                "text_embedding_model": Settings.EMBEDDING_MODEL,
+                "text_vector_dimension": Settings.VECTOR_DIMENSION,
+                "image_embedding_model": Settings.IMAGE_EMBEDDING_MODEL,
+                "image_vector_dimension": Settings.IMAGE_VECTOR_DIMENSION,
+                "normalized": Settings.NORMALIZE_EMBEDDINGS,
+                "device": Settings.EMBEDDING_DEVICE,
             },
 
             "vector_database": {
-
                 "provider": "Qdrant",
-
-                "collection":
-                    Settings.QDRANT_COLLECTION,
-
-                "host":
-                    Settings.QDRANT_HOST,
-
-                "port":
-                    Settings.QDRANT_PORT,
-
-                "distance_metric":
-                    Settings.DISTANCE_METRIC,
-
+                "text_collection": Settings.QDRANT_COLLECTION,
+                "image_collection": Settings.IMAGE_COLLECTION,
+                "host": Settings.QDRANT_HOST,
+                "port": Settings.QDRANT_PORT,
+                "distance_metric": Settings.DISTANCE_METRIC,
             },
 
             "processing": {
-
                 "metadata_extracted": True,
-
                 "text_extracted": True,
-
                 "text_cleaned": True,
-
                 "text_chunked": True,
-
                 "chunk_validation": True,
-
+                "text_embeddings_generated": True,
+                "text_vectors_uploaded": True,
                 "ocr_enabled": True,
-
                 "images_extracted": True,
-
+                "image_embeddings_generated": True,
+                "image_vectors_uploaded": True,
                 "tables_extracted": True,
-
             },
-
         }
 
         return report
