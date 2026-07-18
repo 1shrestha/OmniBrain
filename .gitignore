@@ -1,76 +1,78 @@
-
-# OmniBrain - PDF Ingestion Engine
-
+# =====================================================
+# OmniBrain - Multimodal PDF Ingestion Engine
+# =====================================================
 
 # Python
-
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
 
-
-# Virtual Environment
-
+# Virtual Environments
 .env
 .venv/
 venv/
 env/
 
-
 # IDE
-
 .vscode/
 .idea/
 
-
 # Operating System Files
-
 .DS_Store
 Thumbs.db
 
-
 # Logs
-
 logs/
 *.log
 
-
 # Python Test Cache
-
 .pytest_cache/
 .coverage
 htmlcov/
 
-
 # Jupyter
-
 .ipynb_checkpoints/
 
-
 # Build Files
-
 build/
 dist/
 *.egg-info/
 
-
-# Generated Outputs
-
+# Generated Data
 data/processed/
 data/temp/
 
+# Vector Database
+data/vector_db/
 
-# Reports (Generated)
+# Model Cache
+.cache/
+.huggingface/
+.hf/
+models/
 
+# Reports
 reports/
 
-
 # Temporary Files
-
 *.tmp
 *.temp
+*.bak
+*.swp
 
-
-# Python Environment Files
-
+# Python Environment
 .python-version
+
+# Colab
+sample_data/
+
+# Environment Variables
+.env.*
+!.env.example
+
+# Database Files
+*.sqlite
+*.db
+*.lock
