@@ -27,6 +27,7 @@ from src.embeddings.embedding_generator import EmbeddingGenerator
 from src.embeddings.image_embedding import ImageEmbeddingGenerator
 
 from src.vector_store.qdrant_store import QdrantStore
+from src.preprocessing.layout.parser import LayoutParser
 
 
 class IngestionPipeline:
@@ -67,7 +68,16 @@ class IngestionPipeline:
             text_data = self.extract_text(pdf_path, document)
             text_data = self.clean_text(text_data)
 
-            chunk_data = self.generate_chunks(pdf_path, text_data, metadata_data)
+            layout_document = self.parse_layout(
+                pdf_path,
+                document,
+            )
+
+            chunk_data = self.generate_chunks(
+                pdf_path,
+                text_data,
+                metadata_data,
+            )
 
             text_embeddings = self.generate_embeddings(pdf_path)
             text_vectors_uploaded = self.upload_vectors(text_embeddings)
@@ -120,6 +130,17 @@ class IngestionPipeline:
             page["text"] = cleaner.clean(page["text"])
         print("Text Cleaned")
         return text_data
+
+
+    def parse_layout(self, pdf_path, document):
+        parser = LayoutParser()
+        layout_document = parser.parse_document(
+            document=document,
+            pdf_path=str(pdf_path),
+            document_name=pdf_path.stem,
+        )
+        print("Layout Parsed")
+        return layout_document
 
     def generate_chunks(self, pdf_path, text_data, metadata_data):
         chunker = TextChunker(pdf_path)
