@@ -18,7 +18,7 @@ import json
 import asyncio
 from openai import AsyncOpenAI
 
-client = AsyncOpenAI()  # reads OPENAI_API_KEY from your environment
+client = AsyncOpenAI(api_key="AQ.Ab8RN6JbaNtTysWd8WSDHgRS-prziT1hm3j1iMP_6J3SruURgw")  # reads OPENAI_API_KEY from your environment
 
 EXTRACTION_PROMPT = """You are looking at one page from a financial document.
 
