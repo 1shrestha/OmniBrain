@@ -47,11 +47,11 @@ data/temp/
 # Vector Database
 data/vector_db/
 
-# Model Cache
-.cache/
-.huggingface/
-.hf/
-models/
+# Model Cache (only top-level models folder)
+/.cache/
+/.huggingface/
+/.hf/
+/models/
 
 # Reports
 reports/
