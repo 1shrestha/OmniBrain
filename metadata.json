@@ -1,0 +1,6 @@
+{
+  "name": "OmniBrain",
+  "description": "An intelligent AI assistant capable of uploading documents, semantic search, RAG, citations, and analytics.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
