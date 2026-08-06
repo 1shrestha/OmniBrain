@@ -14,4 +14,4 @@ def home():
 
 @app.get("/health")
 def health():
-    return {"Status": "Server Running"}
+    return {"status": "Server Running"}
