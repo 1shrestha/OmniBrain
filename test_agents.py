@@ -1,4 +1,4 @@
-import pytest #pytet has not been used!
+import pytest #pytest, not been used!
 import os
 from agents.search_agent import SearchAgent
 from agents.sql_agent import SQLAgent
