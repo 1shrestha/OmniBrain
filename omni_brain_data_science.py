@@ -1,7 +1,7 @@
 from sentence_transformers import SentenceTransformer
 import time
 
-#load the model
+#load model
 model = SentenceTransformer("all-MiniLM-L6-v2")
 #using sample data
 documents = [
