@@ -27,7 +27,7 @@ app = FastAPI(title="OmniBrain Vision Extraction Service")
 UPLOAD_DIR = "uploads"
 MAX_FILE_SIZE_MB = 50
 
-# In-memory job store. Fine for a project/demo; swap for Redis if u
+# In-memory job store. Fine for a project/demo; swap for Redis if you
 # need this to survive a server restart or run across multiple workers.
 jobs: dict[str, dict] = {}
 
