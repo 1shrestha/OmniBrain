@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: omnibrain-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: API_KEY
+        sync: false
+      - key: PORT
+        value: 8000
+
+  - type: web
+    name: omnibrain-streamlit
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port 8000
+    envVars:
+      - key: OMNIBRAIN_API_URL
+        value: https://omnibrain-backend.onrender.com
