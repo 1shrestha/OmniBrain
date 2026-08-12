@@ -1,99 +1,59 @@
-# OmniBrain — FastAPI Backend
+# OmniBrain — Streamlit Frontend
+
+A modular, polished Streamlit frontend for OmniBrain, fully wired to
+the FastAPI backend in `../backend`.
 
 ## Run it
 
 ```bash
-cd backend
+cd frontend
 pip install -r requirements.txt
-cp .env.example .env   # then add your GEMINI_API_KEY
-uvicorn app.main:app --reload --port 8000
+streamlit run app.py
 ```
 
-Docs at `http://localhost:8000/docs`. Everything is mounted under `/api/v1`
-(e.g. `http://localhost:8000/api/v1/health`) — `app/main.py` does
-`app.include_router(router, prefix="/api/v1")`.
+It talks to `http://localhost:8000` by default (with the `/api/v1`
+prefix appended automatically). Change the backend URL any time from
+**Settings → API Configuration**, or by editing `DEFAULT_BACKEND_URL`
+in `config.py`. Start the backend first (see `../backend/README.md`)
+or every page will show a friendly "can't reach the backend" message
+instead of failing silently.
 
-## What was already here
+## Every page talks to a real endpoint
 
-Your upload's `app/` folder was a real, working PDF Q&A backend:
-upload → extract (PyPDF2, OCR fallback) → chunk → embed
-(sentence-transformers) → store (ChromaDB) → retrieve → generate
-(Gemini via a LangGraph workflow). That pipeline is untouched.
+| Page | Backend calls |
+|---|---|
+| Dashboard | (uses session data from the other pages) |
+| Analyze Website | `POST /analyze` — creates a project, returns it into session state |
+| Documents | `POST /upload`, `GET /documents`, `DELETE /documents/{id}` |
+| OmniBrain Chat | `POST /chat`, scoped to the current project via `project_id` |
+| Simulation | `POST/GET /projects/{id}/simulation/*` |
+| Analytics | `GET /analytics` |
+| Settings | `GET /health` |
 
-## Bugs fixed
+A project created on the Analyze Website page carries a real
+`project_id` from the backend into `st.session_state["current_project"]`.
+Chat and Documents both pick that up automatically — ask a question
+after analyzing a site and it retrieves from that site's indexed
+content specifically, not everything in the vector store.
 
-1. **`app.models` import path.** The schemas lived in `app/MODELS/`
-   (uppercase). `routes.py` imported `from app.models.schemas import
-   ...` — that only resolves on a case-insensitive filesystem
-   (Windows). On Linux it would raise `ModuleNotFoundError` the
-   moment the server started. Fixed by making the real package
-   `app/models/` (lowercase).
+## Demo-mode fallback
 
-2. **Fake singletons in `core/dependencies.py`.** Every getter
-   (`get_document_service()`, etc.) just did `return DocumentService()`
-   — a brand-new instance, with a brand-new empty in-memory registry,
-   on *every request*. In practice this meant: upload a PDF, then call
-   `GET /documents` a moment later, and it would come back empty,
-   because the `AnalyticsService` holding the registry had already
-   been thrown away and recreated. `/health`'s uptime was always ~0
-   for the same reason. Fixed with `@lru_cache()` on each getter so
-   they're real singletons for the life of the process.
+If a request 404s (e.g. you're pointed at an older backend, or one
+that doesn't implement `/analyze` yet), `services/api_client.py`
+degrades to clearly-labeled demo data instead of crashing the page —
+useful for previewing the UI without a backend running at all. Once
+a real backend responds, real data takes over automatically; no
+frontend code needs to change either way.
 
-3. **`main.py` CORS origins** didn't include Streamlit's default port
-   (8501) — added it.
+## Structure
 
-## What was added
-
-The frontend's spec described website analysis and simulation, which
-weren't implemented yet. Added, reusing the existing pipeline
-wherever the shape matched:
-
-- **`services/scraper_service.py`** — `requests` + `BeautifulSoup`
-  breadth-first crawler, same-domain only, capped at
-  `SCRAPER_MAX_PAGES` (default 15). Not a headless browser, so
-  JS-only single-page apps will yield thin content — swap
-  `fetch_page()` for Playwright later if that turns out to matter;
-  nothing else needs to change.
-- **`services/website_service.py`** — orchestrates
-  crawl → clean → chunk → embed → store, **reusing
-  `PDFService.clean_text`/`chunk_document`** rather than duplicating
-  chunking logic. A scraped page and a PDF page are both just "text
-  with a page number" by the time they reach that step.
-- **`services/project_service.py`** — in-memory project registry
-  (same pattern as the existing `AnalyticsService` document
-  registry). Ties together a project's website, its documents, its
-  chat history, and its simulation session.
-- **`services/simulation_service.py`** — generates the dynamic
-  UI-component list the Simulation page renders. Deterministic and
-  template-based rather than another LLM call, so it works even
-  without `GEMINI_API_KEY` set — swap `_build_components()` for a
-  Gemini call later if you want it content-aware; the shape it
-  returns wouldn't need to change.
-- **New endpoints**: `POST /analyze`, `GET /projects`,
-  `GET /projects/{id}/status`, `GET /projects/{id}/chat-history`,
-  `POST /projects/{id}/simulation/start`,
-  `GET /projects/{id}/simulation/state`,
-  `POST /projects/{id}/simulation/stop`, `GET /analytics`.
-- **`/chat` and `/upload`** now accept an optional `project_id` so a
-  question or a document can be scoped to a specific analyzed
-  website — chunks from both PDFs and scraped pages live in the same
-  ChromaDB collection, tagged with `source_type` (`document` |
-  `website`) and `project_id`.
-
-## What's still a reasonable next step, not done here
-
-- The in-memory registries (`AnalyticsService`, `ProjectService`)
-  reset on server restart — fine for a demo, not for production.
-  Swap them for a real database (Postgres/SQLite) behind the same
-  method signatures and nothing above them changes.
-- `ScraperService` doesn't check `robots.txt` or rate-limit itself
-  beyond `SCRAPER_TIMEOUT_SECONDS` per request — worth adding before
-  pointing it at sites you don't own.
-- No auth is enforced by default (`AUTH_ENABLED=false`). Turn it on
-  and set `API_KEY` in `.env` for anything beyond local development.
-
-## Environment variables
-
-See `.env.example`. The only one you actually need to set for `/chat`
-to generate real answers is `GEMINI_API_KEY` — everything else has a
-sane default.
+```
+frontend/
+├── app.py                    # entry point — wiring only
+├── config.py                 # page config, session state defaults, nav items, API_PREFIX
+├── pages/                    # one module per screen, each exports render()
+├── components/                # sidebar, cards, progress steps, chat bubbles, arch diagram
+├── services/api_client.py     # the ONLY place that talks HTTP to the backend
+├── assets/styles.css          # the light/purple/blue AI SaaS theme
+└── .streamlit/config.toml     # disables Streamlit's auto page-nav (we use a custom sidebar)
+```

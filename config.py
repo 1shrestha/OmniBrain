@@ -1,86 +1,77 @@
 """
-Application configuration.
-Loads environment variables and provides typed settings.
+OmniBrain — global frontend configuration.
+
+Centralizes page config, default settings and constants so the rest
+of the app never hardcodes strings that might change later.
 """
 
-import os
-from pathlib import Path
-from typing import Optional
+import streamlit as st
 
-from dotenv import load_dotenv
+APP_NAME = "OmniBrain"
+APP_ICON = "🧠"
+APP_TAGLINE = "Turn websites and documents into intelligent AI experiences."
 
-load_dotenv()
+DEFAULT_BACKEND_URL = "http://localhost:8000"
+API_PREFIX = "/api/v1"
+REQUEST_TIMEOUT_SECS = 30
+UPLOAD_TIMEOUT_SECS = 120
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+NAV_ITEMS = [
+    {"key": "dashboard", "label": "Dashboard", "icon": "🏠"},
+    {"key": "analyze", "label": "Analyze Website", "icon": "🌐"},
+    {"key": "documents", "label": "Documents", "icon": "📄"},
+    {"key": "chat", "label": "OmniBrain Chat", "icon": "💬"},
+    {"key": "simulation", "label": "Simulation", "icon": "🤖"},
+    {"key": "analytics", "label": "Analytics", "icon": "📊"},
+    {"key": "settings", "label": "Settings", "icon": "⚙️"},
+]
+
+PRIMARY_PURPLE = "#6C5CE7"
+PRIMARY_BLUE = "#4F7CFF"
+ACCENT_PINK = "#FFC2D1"
+ACCENT_GREEN = "#B8E6D5"
+NAVY_TEXT = "#1B1F3B"
+MUTED_TEXT = "#6B7189"
+BG_LIGHT = "#F7F8FC"
+CARD_BG = "#FFFFFF"
+BORDER_COLOR = "#ECEBFA"
 
 
-class Settings:
-    """Centralized application settings loaded from environment."""
-
-    # ── Project ──────────────────────────────────────────────────────
-    APP_NAME: str = "OmniBrain"
-    APP_VERSION: str = "1.0.0"
-    APP_DESCRIPTION: str = "AI-powered website intelligence and document Q&A platform"
-    DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
-
-    # ── Server ───────────────────────────────────────────────────────
-    HOST: str = os.getenv("HOST", "0.0.0.0")
-    PORT: int = int(os.getenv("PORT", "8000"))
-    CORS_ORIGINS: list[str] = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://localhost:8501",   # Streamlit default port
-        "http://127.0.0.1:8501",
-    ]
-
-    # ── Authentication (placeholder) ─────────────────────────────────
-    API_KEY: Optional[str] = os.getenv("API_KEY")
-    AUTH_ENABLED: bool = os.getenv("AUTH_ENABLED", "false").lower() == "true"
-
-    # ── Google Gemini ────────────────────────────────────────────────
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = "gemini-2.0-flash-exp"
-    GEMINI_TEMPERATURE: float = 0.2
-    GEMINI_MAX_TOKENS: int = 4096
-
-    # ── Embeddings ───────────────────────────────────────────────────
-    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
-    EMBEDDING_DIMENSION: int = 384
-
-    # ── ChromaDB ─────────────────────────────────────────────────────
-    CHROMA_PERSIST_DIR: str = str(BASE_DIR / "vector_store")
-    CHROMA_COLLECTION_NAME: str = "omnibrain_docs"
-
-    # ── Upload ───────────────────────────────────────────────────────
-    UPLOAD_DIR: str = str(BASE_DIR / "uploads")
-    REPORTS_DIR: str = str(BASE_DIR / "reports")
-    MAX_UPLOAD_SIZE_MB: int = 50
-    ALLOWED_EXTENSIONS: set[str] = {".pdf"}
-
-    # ── Chunking ─────────────────────────────────────────────────────
-    CHUNK_SIZE: int = 1000
-    CHUNK_OVERLAP: int = 200
-
-    # ── Retrieval ────────────────────────────────────────────────────
-    TOP_K_RESULTS: int = 5
-    SIMILARITY_THRESHOLD: float = 0.5
-
-    # ── Website Scraping / Analysis ─────────────────────────────────
-    SCRAPER_MAX_PAGES: int = int(os.getenv("SCRAPER_MAX_PAGES", "15"))
-    SCRAPER_TIMEOUT_SECONDS: int = int(os.getenv("SCRAPER_TIMEOUT_SECONDS", "10"))
-    SCRAPER_USER_AGENT: str = os.getenv(
-        "SCRAPER_USER_AGENT", "OmniBrainBot/1.0 (+https://omnibrain.ai/bot)"
+def configure_page() -> None:
+    """Must be the first Streamlit call in the app."""
+    st.set_page_config(
+        page_title=f"{APP_NAME} — AI Website Intelligence",
+        page_icon=APP_ICON,
+        layout="wide",
+        initial_sidebar_state="expanded",
     )
-    SCRAPER_MAX_CONTENT_CHARS_PER_PAGE: int = 20000
-
-    # ── Logging ──────────────────────────────────────────────────────
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
-    LOG_FORMAT: str = "json"
 
 
-settings = Settings()
-
-# ── Ensure required directories exist ──────────────────────────────
-for _dir in [settings.UPLOAD_DIR, settings.CHROMA_PERSIST_DIR, settings.REPORTS_DIR]:
-    Path(_dir).mkdir(parents=True, exist_ok=True)
+def init_session_state() -> None:
+    """Populate st.session_state with every key the app relies on."""
+    defaults = {
+        "current_page": "dashboard",
+        "backend_url": DEFAULT_BACKEND_URL,
+        "api_key": "",
+        "backend_connected": None,
+        "ai_status": None,
+        "theme_mode": "Light",
+        "current_project": None,
+        "projects": [],
+        "documents": [],
+        "chat_history": {},
+        "analysis_status": {},
+        "analysis_result": {},
+        "simulation_state": {},
+        "simulation_running": False,
+        "stats": {
+            "websites_analyzed": 0,
+            "documents_processed": 0,
+            "ai_conversations": 0,
+            "active_simulations": 0,
+        },
+        "toast_queue": [],
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
