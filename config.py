@@ -1,65 +1,86 @@
+"""
+Application configuration.
+Loads environment variables and provides typed settings.
+"""
+
 import os
+from pathlib import Path
+from typing import Optional
 
-# Load API keys from .env file if it exists in the current directory or home directory
-for env_path in [".env", os.path.expanduser("~/.env")]:
-    if os.path.exists(env_path):
-        with open(env_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, val = line.split("=", 1)
-                    # Strip quotes if present
-                    val = val.strip().strip("'").strip('"')
-                    os.environ[key.strip()] = val
+from dotenv import load_dotenv
 
-# Load API keys from environment variables
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+load_dotenv()
 
-# Active provider: exclusively 'gemini'
-DEFAULT_PROVIDER = "gemini"
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Model configurations
-MODELS = {
-    "openai": {
-        "vlm": "gpt-4o",
-        "llm": "gpt-4o-mini",
-        "embed": "text-embedding-3-small"
-    },
-    "gemini": {
-        "vlm": "gemini-2.5-flash",
-        "llm": "gemini-2.5-flash",
-        "embed": "text-embedding-004"
-    }
-}
 
-# General configurations
-MAX_SELF_RAG_RETRIES = 3
+class Settings:
+    """Centralized application settings loaded from environment."""
 
-def get_vlm_model(provider=None):
-    prov = provider or DEFAULT_PROVIDER
-    return MODELS[prov]["vlm"]
+    # ── Project ──────────────────────────────────────────────────────
+    APP_NAME: str = "OmniBrain"
+    APP_VERSION: str = "1.0.0"
+    APP_DESCRIPTION: str = "AI-powered website intelligence and document Q&A platform"
+    DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
-def get_llm_model(provider=None):
-    prov = provider or DEFAULT_PROVIDER
-    return MODELS[prov]["llm"]
+    # ── Server ───────────────────────────────────────────────────────
+    HOST: str = os.getenv("HOST", "0.0.0.0")
+    PORT: int = int(os.getenv("PORT", "8000"))
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://localhost:8501",   # Streamlit default port
+        "http://127.0.0.1:8501",
+    ]
 
-def get_embed_model(provider=None):
-    prov = provider or DEFAULT_PROVIDER
-    return MODELS[prov]["embed"]
+    # ── Authentication (placeholder) ─────────────────────────────────
+    API_KEY: Optional[str] = os.getenv("API_KEY")
+    AUTH_ENABLED: bool = os.getenv("AUTH_ENABLED", "false").lower() == "true"
 
-def get_api_key(provider=None):
-    prov = provider or DEFAULT_PROVIDER
-    if prov == "gemini":
-        return GEMINI_API_KEY
-    return OPENAI_API_KEY
+    # ── Google Gemini ────────────────────────────────────────────────
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = "gemini-2.0-flash-exp"
+    GEMINI_TEMPERATURE: float = 0.2
+    GEMINI_MAX_TOKENS: int = 4096
 
-def print_status():
-    print(f"--- OmniBrain Configuration ---")
-    print(f"Default Provider: {DEFAULT_PROVIDER.upper()}")
-    print(f"Gemini API Key Configured: {'Yes' if GEMINI_API_KEY else 'No (set GEMINI_API_KEY environment variable)'}")
-    print(f"OpenAI API Key Configured: {'Yes' if OPENAI_API_KEY else 'No (set OPENAI_API_KEY environment variable)'}")
-    print(f"VLM Model: {get_vlm_model()}")
-    print(f"LLM Model: {get_llm_model()}")
-    print(f"Embed Model: {get_embed_model()}")
-    print(f"---------------------------------")
+    # ── Embeddings ───────────────────────────────────────────────────
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    EMBEDDING_DIMENSION: int = 384
+
+    # ── ChromaDB ─────────────────────────────────────────────────────
+    CHROMA_PERSIST_DIR: str = str(BASE_DIR / "vector_store")
+    CHROMA_COLLECTION_NAME: str = "omnibrain_docs"
+
+    # ── Upload ───────────────────────────────────────────────────────
+    UPLOAD_DIR: str = str(BASE_DIR / "uploads")
+    REPORTS_DIR: str = str(BASE_DIR / "reports")
+    MAX_UPLOAD_SIZE_MB: int = 50
+    ALLOWED_EXTENSIONS: set[str] = {".pdf"}
+
+    # ── Chunking ─────────────────────────────────────────────────────
+    CHUNK_SIZE: int = 1000
+    CHUNK_OVERLAP: int = 200
+
+    # ── Retrieval ────────────────────────────────────────────────────
+    TOP_K_RESULTS: int = 5
+    SIMILARITY_THRESHOLD: float = 0.5
+
+    # ── Website Scraping / Analysis ─────────────────────────────────
+    SCRAPER_MAX_PAGES: int = int(os.getenv("SCRAPER_MAX_PAGES", "15"))
+    SCRAPER_TIMEOUT_SECONDS: int = int(os.getenv("SCRAPER_TIMEOUT_SECONDS", "10"))
+    SCRAPER_USER_AGENT: str = os.getenv(
+        "SCRAPER_USER_AGENT", "OmniBrainBot/1.0 (+https://omnibrain.ai/bot)"
+    )
+    SCRAPER_MAX_CONTENT_CHARS_PER_PAGE: int = 20000
+
+    # ── Logging ──────────────────────────────────────────────────────
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    LOG_FORMAT: str = "json"
+
+
+settings = Settings()
+
+# ── Ensure required directories exist ──────────────────────────────
+for _dir in [settings.UPLOAD_DIR, settings.CHROMA_PERSIST_DIR, settings.REPORTS_DIR]:
+    Path(_dir).mkdir(parents=True, exist_ok=True)

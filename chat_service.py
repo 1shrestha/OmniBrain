@@ -19,6 +19,7 @@ from app.core.logger import get_logger
 from app.database.embeddings import EmbeddingGenerator
 from app.database.vector_store import VectorStore
 from app.ai.langgraph_workflow import LangGraphWorkflow
+from app.services.project_service import ProjectService
 
 logger = get_logger(__name__)
 
@@ -37,10 +38,12 @@ class ChatService:
         embedding_generator: Optional[EmbeddingGenerator] = None,
         vector_store: Optional[VectorStore] = None,
         langgraph_workflow: Optional[LangGraphWorkflow] = None,
+        project_service: Optional[ProjectService] = None,
     ) -> None:
         self._embedding_generator = embedding_generator or EmbeddingGenerator()
         self._vector_store = vector_store or VectorStore()
         self._langgraph_workflow = langgraph_workflow or LangGraphWorkflow()
+        self._project_service = project_service
 
     async def ask(
         self,
@@ -48,6 +51,7 @@ class ChatService:
         document_ids: Optional[list[str]] = None,
         top_k: int = 5,
         temperature: Optional[float] = None,
+        project_id: Optional[str] = None,
     ) -> dict[str, Any]:
         """
         Process a user question and return an AI-generated answer with citations.
@@ -79,7 +83,10 @@ class ChatService:
 
         # ── 2. Search vector store ───────────────────────────────────
         where_filter = None
-        if document_ids and len(document_ids) > 0:
+        if project_id:
+            # Scope to everything indexed under this project (website + docs)
+            where_filter = {"project_id": project_id}
+        elif document_ids and len(document_ids) > 0:
             # ChromaDB $in operator for filtering by document IDs
             where_filter = {"document_id": {"$in": document_ids}}
 
@@ -125,6 +132,8 @@ class ChatService:
                 "chunk_index": metadata.get("chunk_index", 0),
                 "similarity_score": round(similarity, 4),
                 "snippet": result["document"][:500],
+                "source_type": metadata.get("source_type", "document"),
+                "url": metadata.get("url"),
             })
 
         context = "\n\n".join(context_parts) if context_parts else ""
@@ -150,6 +159,14 @@ class ChatService:
 
         elapsed = int((time.time() - start_time) * 1000)
         logger.info(f"Question answered in {elapsed}ms | {len(sources)} sources cited")
+
+        if self._project_service:
+            self._project_service.record_query(elapsed)
+            if project_id:
+                self._project_service.append_chat_message(project_id, "user", question)
+                self._project_service.append_chat_message(
+                    project_id, "assistant", llm_response.get("answer", "")
+                )
 
         return {
             "answer": llm_response.get("answer", ""),

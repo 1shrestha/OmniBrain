@@ -1,1 +1,1 @@
-"""Database, vector store, and embedding modules."""
+"""AI integration modules: Gemini, LangGraph workflow, prompts."""

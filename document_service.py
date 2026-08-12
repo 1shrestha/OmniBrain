@@ -19,6 +19,7 @@ from app.database.embeddings import EmbeddingGenerator
 from app.database.vector_store import VectorStore
 from app.services.pdf_service import PDFService
 from app.services.analytics_service import AnalyticsService
+from app.services.project_service import ProjectService
 
 logger = get_logger(__name__)
 
@@ -42,13 +43,17 @@ class DocumentService:
         analytics_service: Optional[AnalyticsService] = None,
         embedding_generator: Optional[EmbeddingGenerator] = None,
         vector_store: Optional[VectorStore] = None,
+        project_service: Optional[ProjectService] = None,
     ) -> None:
         self._pdf_service = pdf_service or PDFService()
         self._analytics_service = analytics_service or AnalyticsService()
         self._embedding_generator = embedding_generator or EmbeddingGenerator()
         self._vector_store = vector_store or VectorStore()
+        self._project_service = project_service
 
-    async def upload_and_process(self, filename: str, file_bytes: bytes) -> dict[str, Any]:
+    async def upload_and_process(
+        self, filename: str, file_bytes: bytes, project_id: Optional[str] = None
+    ) -> dict[str, Any]:
         """
         Validate, save, and process an uploaded PDF file.
 
@@ -132,6 +137,8 @@ class DocumentService:
                 "chunk_index": i,
                 "page_numbers": chunk["page_numbers"],
                 "char_count": chunk["char_count"],
+                "source_type": "document",
+                "project_id": project_id or "",
             })
 
         # ── Store in ChromaDB ────────────────────────────────────────
@@ -150,7 +157,11 @@ class DocumentService:
             pages=pages,
             chunks=chunks,
         )
+        doc_metadata["project_id"] = project_id
         self._analytics_service.register_document(document_id, doc_metadata)
+
+        if project_id and self._project_service:
+            self._project_service.increment_documents(project_id)
 
         logger.info(
             f"Document processed successfully | id={document_id} "
@@ -164,6 +175,7 @@ class DocumentService:
             "chunks": len(chunks),
             "status": "success",
             "message": "Document processed successfully",
+            "project_id": project_id,
         }
 
     async def get_all_documents(self) -> list[dict[str, Any]]:
@@ -179,6 +191,7 @@ class DocumentService:
                 "file_size_bytes": doc["file_size_bytes"],
                 "created_at": doc["created_at"],
                 "status": doc["status"],
+                "project_id": doc.get("project_id"),
             })
         return result
 
