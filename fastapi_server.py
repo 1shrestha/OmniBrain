@@ -23,9 +23,9 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from extractor import run_extraction
 
 
-# =============================================================
+# ============================================================
 # FASTAPI APP
-# =============================================================
+# ============================================================
 
 app = FastAPI(
     title="OmniBrain Vision Extraction Service"
