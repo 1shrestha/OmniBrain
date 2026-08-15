@@ -1,0 +1,67 @@
+services:
+  backend:
+    build: ./backend
+    container_name: omnibrain-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      CORS_ORIGINS: "https://omnibrain.in,https://www.omnibrain.in,http://localhost:8501"
+    volumes:
+      - omnibrain-uploads:/app/uploads
+      - omnibrain-reports:/app/reports
+      - omnibrain-vectorstore:/app/vector_store
+    expose:
+      - "8000"
+    networks:
+      - omnibrain-net
+
+  frontend:
+    build: ./frontend
+    container_name: omnibrain-frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: "http://backend:8000"
+    depends_on:
+      - backend
+    expose:
+      - "8501"
+    networks:
+      - omnibrain-net
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: omnibrain-nginx
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/omnibrain.conf:/etc/nginx/conf.d/omnibrain.conf:ro
+      - ./deploy/certbot/conf:/etc/letsencrypt:ro
+      - ./deploy/certbot/www:/var/www/certbot:ro
+    networks:
+      - omnibrain-net
+
+  certbot:
+    image: certbot/certbot
+    container_name: omnibrain-certbot
+    volumes:
+      - ./deploy/certbot/conf:/etc/letsencrypt
+      - ./deploy/certbot/www:/var/www/certbot
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done"
+
+networks:
+  omnibrain-net:
+    driver: bridge
+
+volumes:
+  omnibrain-uploads:
+  omnibrain-reports:
+  omnibrain-vectorstore:
