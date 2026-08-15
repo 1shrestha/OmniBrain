@@ -1,1 +1,1 @@
-# OmniBrain Test Suite
+# OmniBrain Source Package

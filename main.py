@@ -1,144 +1,103 @@
-"""
-OmniBrain — FastAPI Application Entry Point.
+import os
+import sys
 
-Initializes and configures the FastAPI application with:
-- CORS middleware for the Streamlit frontend
-- Static file serving for uploaded PDFs
-- All API routes mounted under /api/v1
-- Global exception handlers
-- Startup/shutdown lifecycle events
-"""
+# Ensure src is in sys.path
+sys.path.insert(0, os.path.dirname(__file__))
 
-from contextlib import asynccontextmanager
-from pathlib import Path
+from retrieval import MultiModalVectorStore
+from orchestrator import OmniBrainOrchestrator
+from guardrails import GuardrailsManager
+from evaluation import OmniBrainEvaluator
 
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
-
-from app.api.routes import router
-from app.core.config import settings
-from app.core.exceptions import OmniBrainError
-from app.core.logger import get_logger
-
-logger = get_logger(__name__)
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """
-    Application lifespan: startup and shutdown events.
-
-    Startup: Log that the server is ready and verify the upload directory exists.
-    Shutdown: Log the shutdown event.
-    """
-    # ── Startup ─────────────────────────────────────────────────────
-    logger.info(
-        f"{settings.APP_NAME} v{settings.APP_VERSION} starting up",
-        extra={
-            "host": settings.HOST,
-            "port": settings.PORT,
-            "debug": settings.DEBUG,
-            "auth_enabled": settings.AUTH_ENABLED,
-            "embedding_model": settings.EMBEDDING_MODEL,
-            "gemini_model": settings.GEMINI_MODEL,
-        },
+def run_demo():
+    print("==================================================")
+    print("      OMNIBRAIN ORCHESTRATOR DEMO RUN             ")
+    print("==================================================")
+    
+    # 1. Setup Vector Database with sample context
+    print("[1/5] Initializing Multi-Modal Vector Database...")
+    db = MultiModalVectorStore(is_mock=True)
+    db.add_text(
+        "Apple Inc. reported record high earnings for Q3 2026, driven by cloud computing.",
+        {"source": "aapl_q3_report.txt"}
     )
-
-    # Ensure directories exist
-    Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-    Path(settings.CHROMA_PERSIST_DIR).mkdir(parents=True, exist_ok=True)
-    Path(settings.REPORTS_DIR).mkdir(parents=True, exist_ok=True)
-
-    yield
-
-    # ── Shutdown ────────────────────────────────────────────────────
-    logger.info(f"{settings.APP_NAME} shutting down")
-
-
-# ═══════════════════════════════════════════════════════════════════
-# Application Factory
-# ═══════════════════════════════════════════════════════════════════
-
-app = FastAPI(
-    title=settings.APP_NAME,
-    description=settings.APP_DESCRIPTION,
-    version=settings.APP_VERSION,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    lifespan=lifespan,
-)
-
-# ═══════════════════════════════════════════════════════════════════
-# CORS — Allow React frontend to connect
-# ═══════════════════════════════════════════════════════════════════
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ═══════════════════════════════════════════════════════════════════
-# Static Files — Serve uploaded PDFs (for frontend preview)
-# ═══════════════════════════════════════════════════════════════════
-
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
-
-# ═══════════════════════════════════════════════════════════════════
-# API Routes
-# ═══════════════════════════════════════════════════════════════════
-
-app.include_router(router, prefix="/api/v1")
-
-# ═══════════════════════════════════════════════════════════════════
-# Global Exception Handler
-# ═══════════════════════════════════════════════════════════════════
-
-@app.exception_handler(OmniBrainError)
-async def omnibrain_error_handler(request: Request, exc: OmniBrainError) -> JSONResponse:
-    """Handle custom OmniBrain exceptions with structured error responses."""
-    logger.warning(
-        f"OmniBrainError: {exc.message}",
-        extra={"status_code": exc.status_code, "details": exc.details},
+    db.add_text(
+        "Microsoft announced their new AI cloud division growth reached 40% YoY.",
+        {"source": "msft_annual_report.txt"}
     )
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "detail": exc.message,
-            "status_code": exc.status_code,
-            "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
-        },
+    db.add_image(
+        "balance_sheet.png",
+        "Apple Inc. Q3 Balance Sheet showing Total Assets of $500,000 and Total Liabilities of $200,000",
+        {"source": "aapl_balance_sheet_image.png"}
     )
+    print("Added 2 text documents and 1 financial chart image to the index.")
+    print("-" * 50)
+    
+    # 2. Setup Orchestrator and Guardrails
+    print("[2/5] Initializing Agents, StateGraph, and Guardrails...")
+    orchestrator = OmniBrainOrchestrator(db, is_mock=True)
+    guardrails = GuardrailsManager(is_mock=True)
+    evaluator = OmniBrainEvaluator(is_mock=True)
+    print("-" * 50)
+    
+    # 3. Test Case 1: Valid Multi-Modal Investment Memo Generation
+    query = "What is the average stock price of AAPL? Check general earnings report and the balance_sheet.png chart too."
+    print(f"[3/5] User Query: '{query}'")
+    
+    # Run Input Guardrails
+    print("\nRunning input guardrails check...")
+    input_check = guardrails.validate_input(query)
+    if not input_check["allowed"]:
+        print(f"Blocked by Input Guardrails: {input_check['refusal']}")
+        return
+    print("Input allowed.")
+    
+    # Execute through LangGraph Orchestrator
+    print("\nRunning through StateGraph orchestrator...")
+    res = orchestrator.run(query, image_path="balance_sheet.png")
+    
+    # Run Output Guardrails
+    print("Running output guardrails check...")
+    output_check = guardrails.validate_output(res["final_answer"])
+    final_memo = output_check["replacement"]
+    if not output_check["allowed"]:
+        print("Output Sanitized by Guardrails!")
+    
+    print("\nGenerated Final Memo:")
+    print(final_memo)
+    print("-" * 50)
+    
+    # 4. Test Case 2: Run Evaluation
+    print("[4/5] Running Offline Evaluation Pipeline...")
+    eval_metrics = evaluator.evaluate(query, final_memo, res["citations"])
+    print(f"Metrics Results:")
+    print(f"  - Groundedness Score : {eval_metrics['groundedness']:.2f}")
+    print(f"  - Relevance Score    : {eval_metrics['relevance']:.2f}")
+    print(f"  - Hallucination Score: {eval_metrics['hallucination_score']:.2f}")
+    print(f"  - Evaluation Status  : {eval_metrics['status'].upper()}")
+    print("-" * 50)
+    
+    # 5. Test Case 3: Guardrail Refusal Demonstrations
+    print("[5/5] Demonstrating Guardrails triggers...")
+    
+    toxic_query = "You are stupid, I hate you."
+    print(f"\nUser Query: '{toxic_query}'")
+    toxic_check = guardrails.validate_input(toxic_query)
+    print(f"Allowed: {toxic_check['allowed']}")
+    print(f"Response: {toxic_check['refusal']}")
+    
+    off_topic_query = "Can you tell me a joke?"
+    print(f"\nUser Query: '{off_topic_query}'")
+    off_topic_check = guardrails.validate_input(off_topic_query)
+    print(f"Allowed: {off_topic_check['allowed']}")
+    print(f"Response: {off_topic_check['refusal']}")
+    
+    financial_advice = "This stock option guarantees 100% returns and profits."
+    print(f"\nEvaluating Non-compliant Output: '{financial_advice}'")
+    advice_check = guardrails.validate_output(financial_advice)
+    print(f"Allowed: {advice_check['allowed']}")
+    print(f"Sanitized Response: {advice_check['replacement']}")
+    print("==================================================")
 
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Catch-all for unhandled exceptions."""
-    logger.exception(f"Unhandled exception: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={
-            "detail": "An unexpected internal error occurred",
-            "status_code": 500,
-            "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
-        },
-    )
-
-
-# ═══════════════════════════════════════════════════════════════════
-# Root endpoint
-# ═══════════════════════════════════════════════════════════════════
-
-@app.get("/")
-async def root():
-    """Welcome endpoint."""
-    return {
-        "app": settings.APP_NAME,
-        "version": settings.APP_VERSION,
-        "docs": "/docs",
-        "health": "/api/v1/health",
-    }
+if __name__ == "__main__":
+    run_demo()

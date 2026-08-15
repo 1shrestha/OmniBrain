@@ -1,77 +1,25 @@
-"""
-OmniBrain — global frontend configuration.
+import os
+from dotenv import load_dotenv
 
-Centralizes page config, default settings and constants so the rest
-of the app never hardcodes strings that might change later.
-"""
+# Load env variables
+load_dotenv()
 
-import streamlit as st
+# Retrieve API keys and settings
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")
+LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY")
+LANGFUSE_BASE_URL = os.getenv("LANGFUSE_BASE_URL") or os.getenv("LANGFUSE_HOST")
 
-APP_NAME = "OmniBrain"
-APP_ICON = "🧠"
-APP_TAGLINE = "Turn websites and documents into intelligent AI experiences."
+# Determine if the environment should run in mock/offline mode
+OMNIBRAIN_ENV = os.getenv("OMNIBRAIN_ENV", "production").lower()
 
-DEFAULT_BACKEND_URL = "http://localhost:8000"
-API_PREFIX = "/api/v1"
-REQUEST_TIMEOUT_SECS = 30
-UPLOAD_TIMEOUT_SECS = 120
+# Fallback to mock mode automatically if main OpenAI API key is missing or placeholder
+has_no_openai = not OPENAI_API_KEY or "your-" in OPENAI_API_KEY or "your_" in OPENAI_API_KEY
 
-NAV_ITEMS = [
-    {"key": "dashboard", "label": "Dashboard", "icon": "🏠"},
-    {"key": "analyze", "label": "Analyze Website", "icon": "🌐"},
-    {"key": "documents", "label": "Documents", "icon": "📄"},
-    {"key": "chat", "label": "OmniBrain Chat", "icon": "💬"},
-    {"key": "simulation", "label": "Simulation", "icon": "🤖"},
-    {"key": "analytics", "label": "Analytics", "icon": "📊"},
-    {"key": "settings", "label": "Settings", "icon": "⚙️"},
-]
+if OMNIBRAIN_ENV == "mock" or has_no_openai:
+    IS_MOCK = True
+else:
+    IS_MOCK = False
 
-PRIMARY_PURPLE = "#6C5CE7"
-PRIMARY_BLUE = "#4F7CFF"
-ACCENT_PINK = "#FFC2D1"
-ACCENT_GREEN = "#B8E6D5"
-NAVY_TEXT = "#1B1F3B"
-MUTED_TEXT = "#6B7189"
-BG_LIGHT = "#F7F8FC"
-CARD_BG = "#FFFFFF"
-BORDER_COLOR = "#ECEBFA"
-
-
-def configure_page() -> None:
-    """Must be the first Streamlit call in the app."""
-    st.set_page_config(
-        page_title=f"{APP_NAME} — AI Website Intelligence",
-        page_icon=APP_ICON,
-        layout="wide",
-        initial_sidebar_state="expanded",
-    )
-
-
-def init_session_state() -> None:
-    """Populate st.session_state with every key the app relies on."""
-    defaults = {
-        "current_page": "dashboard",
-        "backend_url": DEFAULT_BACKEND_URL,
-        "api_key": "",
-        "backend_connected": None,
-        "ai_status": None,
-        "theme_mode": "Light",
-        "current_project": None,
-        "projects": [],
-        "documents": [],
-        "chat_history": {},
-        "analysis_status": {},
-        "analysis_result": {},
-        "simulation_state": {},
-        "simulation_running": False,
-        "stats": {
-            "websites_analyzed": 0,
-            "documents_processed": 0,
-            "ai_conversations": 0,
-            "active_simulations": 0,
-        },
-        "toast_queue": [],
-    }
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
+# Database path
+DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "historical_stock_data.db"))
